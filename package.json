@@ -2,26 +2,62 @@
   "name": "palawi-inventory",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"src/**/*.test.ts\"",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma db push",
+    "db:seed": "node prisma/seed.mts",
+    "palette": "node scripts/extract-palette.mjs",
+    "icons": "node scripts/make-icons.mjs"
   },
   "dependencies": {
+    "@fontsource/noto-sans": "^5.3.0",
+    "@fontsource/noto-sans-devanagari": "^5.3.0",
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
+    "jose": "^6.2.14",
+    "lucide-react": "^1.66.0",
+    "mongodb": "^7.8.0",
+    "next": "15.5.28",
+    "next-intl": "4.4.0",
+    "pdfkit": "^0.20.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "next": "15.5.28"
+    "recharts": "^2.15.4",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^3.7.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
+    "@eslint/eslintrc": "^3",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^24.19.2",
+    "@types/pdfkit": "^0.17.7",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "autoprefixer": "^10.6.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.28",
-    "@eslint/eslintrc": "^3"
+    "pngjs": "^7.0.0",
+    "postcss": "^8.5.32",
+    "prisma": "^6.19.3",
+    "tailwindcss": "3.4",
+    "typescript": "^5"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "unrs-resolver@1.12.2": true,
+    "prisma@6.19.3": true,
+    "@prisma/engines@6.19.3": true
   }
 }

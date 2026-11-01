@@ -1,26 +1,34 @@
-@import "tailwindcss";
+@import "../styles/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  /* Devanagari needs a touch more line height for matras and conjuncts. */
+  line-height: 1.6;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Long Marathi words must wrap instead of overflowing buttons and table cells. */
+button,
+td,
+th,
+label,
+a {
+  overflow-wrap: anywhere;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-primary-600);
+  outline-offset: 2px;
 }

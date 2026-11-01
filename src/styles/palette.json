@@ -1,0 +1,40 @@
+{
+  "source": "public/palawi-logo.png",
+  "extracted": {
+    "teal": "#60b191",
+    "leaf": "#cde494",
+    "skin": "#e6ad9a"
+  },
+  "checks": {
+    "white on primary-600": "5.00",
+    "white on primary-700": "6.93",
+    "ink on surface": "12.33",
+    "ink-muted on white": "5.70",
+    "ink on secondary-200": "10.31",
+    "white on secondary-700": "5.15"
+  },
+  "primary": {
+    "50": "#f1f8f6",
+    "100": "#e4f2ec",
+    "200": "#c8e4d9",
+    "300": "#9fd0bd",
+    "400": "#6fb99c",
+    "500": "#60b191",
+    "600": "#3c7b62",
+    "700": "#31634f",
+    "800": "#254b3c",
+    "900": "#193329"
+  },
+  "secondary": {
+    "50": "#f7faf0",
+    "100": "#eff5e0",
+    "200": "#dfebc2",
+    "300": "#cae28d",
+    "400": "#afd454",
+    "500": "#96bf30",
+    "600": "#739325",
+    "700": "#5d761e",
+    "800": "#465a17",
+    "900": "#303d0f"
+  }
+}

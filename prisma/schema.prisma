@@ -1,0 +1,337 @@
+// Palawi inventory: multi-tenant schema on MongoDB.
+// Every tenant-owned document carries clientId; documents that belong to a branch also carry institutionId.
+// Queries go through tenantDb() (src/lib/tenant.ts), which injects clientId automatically.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STORE_USER
+  ADMIN
+}
+
+enum Locale {
+  mr
+  en
+}
+
+enum EntryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Direction {
+  IN
+  OUT
+}
+
+/// An organisation using the app (e.g. Palawi).
+model Client {
+  id           String        @id @default(cuid()) @map("_id")
+  code         String        @unique
+  nameMr       String
+  nameEn       String
+  taglineMr    String?
+  taglineEn    String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+  institutions Institution[]
+  users        User[]
+  auditLogs    AuditLog[]
+
+  @@map("clients")
+}
+
+/// A home/branch run by a client (e.g. Prabha-Hira Pratishthan, Pandharpur).
+model Institution {
+  id        String    @id @default(cuid()) @map("_id")
+  clientId  String
+  client    Client    @relation(fields: [clientId], references: [id])
+  code      String
+  nameMr    String
+  nameEn    String
+  cityMr    String?
+  cityEn    String?
+  address   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  users     User[]
+
+  @@unique([clientId, code])
+  @@index([clientId])
+  @@map("institutions")
+}
+
+model User {
+  id               String       @id @default(cuid()) @map("_id")
+  clientId         String
+  client           Client       @relation(fields: [clientId], references: [id])
+  /// Default institution the user works in. Null = all institutions of the client (admins).
+  institutionId    String?
+  institution      Institution? @relation(fields: [institutionId], references: [id])
+  name             String
+  /// Login identifiers; at least one is required. Uniqueness is enforced in the app (Mongo unique
+  /// indexes would treat two missing values as duplicates).
+  email            String?
+  phone            String?
+  passwordHash     String
+  role             Role
+  /// Platform-level permission to add clients. Only granted to the seed (Palawi) admin.
+  canManageClients Boolean      @default(false)
+  locale           Locale       @default(mr)
+  active           Boolean      @default(true)
+  lastLoginAt      DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  deletedAt        DateTime?
+  auditLogs        AuditLog[]
+
+  @@index([clientId])
+  @@index([email])
+  @@index([phone])
+  @@map("users")
+}
+
+/// Append-only record of every create / edit / approve / reject / unlock.
+model AuditLog {
+  id            String   @id @default(cuid()) @map("_id")
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  institutionId String?
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+  action        String
+  entity        String
+  entityId      String
+  oldValue      Json?
+  newValue      Json?
+  reason        String?
+  createdAt     DateTime @default(now())
+
+  @@index([clientId, createdAt])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
+
+/// Item master. Fully editable by the client's admin.
+model Item {
+  id                String    @id @default(cuid()) @map("_id")
+  clientId          String
+  code              String
+  nameMr            String
+  nameEn            String
+  /// GRAIN | PULSES | SPICES | OIL | DAIRY | FUEL | PROVISIONS | VEGETABLE | FRUIT | PERSONAL | CLEANING | UTENSIL | BEDDING | STATIONERY | OTHER
+  category          String
+  /// Vegetable group: LEAFY | FRUIT_VEG | ROOTS | MASALA
+  group             String?
+  /// g | kg | ml | l | piece | packet | set | dozen | bag | cylinder
+  unit              String
+  reorderLevel      Float?
+  perChildDailyNorm Float?
+  trackExpiry       Boolean   @default(false)
+  location          String?
+  active            Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  @@unique([clientId, code])
+  @@index([clientId, category])
+  @@map("items")
+}
+
+/// One line of a register entry.
+type EntryLine {
+  itemId       String?
+  /// Quantity received / added to stock.
+  inQty        Float?
+  /// Quantity consumed / issued / removed from stock.
+  outQty       Float?
+  /// Movement kind for multi-kind registers: purchase | donation | opening | issue | return | damage | loss | adjust_in | adjust_out
+  kind         String?
+  /// purchased | donated (fruit)
+  source       String?
+  donorName    String?
+  rate         Float?
+  amount       Float?
+  expiryDate   DateTime?
+  acknowledged Boolean?
+  note         String?
+}
+
+/// A day's (or month's) entry in one register. Store users create them; admins approve.
+model Entry {
+  id             String      @id @default(cuid()) @map("_id")
+  clientId       String
+  institutionId  String
+  /// grain | meals | vegetables | fruit | personal | cleaning | utensils | expenses | purchase | adjustment
+  module         String
+  /// Calendar day, stored as 00:00 UTC of that day.
+  date           DateTime
+  status         EntryStatus @default(PENDING)
+  childCount     Int?
+  /// Register-specific header fields (menus, worker name, expense details, ...).
+  fields         Json?
+  lines          EntryLine[]
+  remarks        String?
+  createdById    String
+  createdByName  String
+  approvedById   String?
+  approvedByName String?
+  approvedAt     DateTime?
+  rejectReason   String?
+  /// Admin override when stock would go negative on approval.
+  overrideReason String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+
+  @@index([clientId, institutionId, module, date])
+  @@index([clientId, status])
+  @@map("entries")
+}
+
+/// Stock ledger: the single source of truth. Balance = sum of APPROVED movements. Never edited by hand.
+model StockMovement {
+  id            String      @id @default(cuid()) @map("_id")
+  clientId      String
+  institutionId String
+  itemId        String
+  date          DateTime
+  qty           Float
+  direction     Direction
+  /// purchase | donation | opening | consumption | distribution | return | damage | loss | adjustment
+  type          String
+  module        String
+  entryId       String
+  status        EntryStatus
+  createdAt     DateTime    @default(now())
+
+  @@index([clientId, institutionId, itemId, status])
+  @@index([entryId])
+  @@map("stock_movements")
+}
+
+/// A person who has visited, de-duplicated by mobile (+ name).
+model Visitor {
+  id            String    @id @default(cuid()) @map("_id")
+  clientId      String
+  institutionId String
+  key           String
+  name          String
+  mobile        String?
+  dob           DateTime?
+  address       String?
+  visitCount    Int       @default(0)
+  firstVisitAt  DateTime?
+  lastVisitAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([clientId, institutionId, key])
+  @@map("visitors")
+}
+
+/// One row of the gate register.
+model Visit {
+  id            String      @id @default(cuid()) @map("_id")
+  clientId      String
+  institutionId String
+  visitorId     String?
+  date          DateTime
+  serialNo      Int?
+  time          String?
+  visitorName   String
+  dob           DateTime?
+  mobile        String?
+  address       String?
+  /// Canonical purpose code (see src/lib/gate.ts).
+  purpose       String?
+  purposeRaw    String?
+  extraRemark   String?
+  visitNo       Int?
+  /// Data-quality flags from import (e.g. DOB_IS_VISIT_DATE, BAD_MOBILE).
+  flags         String[]
+  status        EntryStatus @default(PENDING)
+  createdById   String?
+  approvedById  String?
+  approvedAt    DateTime?
+  importBatchId String?
+  sourceRow     Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+
+  @@index([clientId, institutionId, date])
+  @@index([importBatchId])
+  @@map("visits")
+}
+
+model Donation {
+  id            String      @id @default(cuid()) @map("_id")
+  clientId      String
+  institutionId String
+  visitId       String?
+  date          DateTime
+  donorName     String
+  donorMobile   String?
+  donorAddress  String?
+  /// CLOTH | FOOD_GRAIN | MEAL | CASH | OTHER
+  type          String
+  description   String?
+  amount        Float?
+  /// Sequential per client, e.g. PALAWI/2026-27/0001
+  receiptNo     String?
+  /// Stock-in entry created from this donation (goods), if any.
+  entryId       String?
+  status        EntryStatus @default(PENDING)
+  importBatchId String?
+  createdById   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+
+  @@index([clientId, institutionId, date])
+  @@index([importBatchId])
+  @@map("donations")
+}
+
+/// An Excel import. Dry run stores the parsed rows + issues for review; commit creates the records.
+model ImportBatch {
+  id            String    @id @default(cuid()) @map("_id")
+  clientId      String
+  institutionId String
+  kind          String
+  fileName      String
+  status        String
+  stats         Json?
+  issues        Json?
+  rows          Json?
+  createdById   String
+  committedAt   DateTime?
+  rolledBackAt  DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([clientId, createdAt])
+  @@map("import_batches")
+}
+
+/// Sequence numbers (e.g. donation receipts).
+model Counter {
+  id       String @id @default(cuid()) @map("_id")
+  clientId String
+  name     String
+  value    Int    @default(0)
+
+  @@unique([clientId, name])
+  @@map("counters")
+}

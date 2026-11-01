@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Palawi — Inventory & Operations Tracker (मराठी / English)
 
-## Getting Started
+Digitises the paper registers of **Prabha-Hira Pratishthan, Pandharpur** (बालगृह run by **Palawi — "a touch of life"**)
+and tracks inventory end to end. Multi-tenant: an admin can add further clients, each with its own institutions;
+one client's data is never visible to another.
 
-First, run the development server:
+## What it does
+
+| Area | Store User | Admin |
+|---|---|---|
+| **Registers** — grain & provisions, meals, vegetables, fruit, monthly personal items, cleaning supplies, utensils/bedding/stationery, expenses, stock in (purchase / donation / opening) | Enter, edit or delete own entries while pending | View all, approve / reject (reason) / unlock (reason), approve a whole day, record medical officer verification, stock adjustments |
+| **Stock** — balances (approved only, pending shown separately), item ledger, days of stock left, low/out alerts (red), monthly statement + Excel | View | View, item master (add / edit / deactivate) |
+| **Gate register** — visits by date, visitor profiles (de-duplicated by mobile + name), donation visits create a Donation and a pending stock-in entry | Record visits; mobiles masked, DOB hidden | Full view, approve / reject |
+| **Donations** — list, bilingual **PDF receipt** (only after approval, numbered `PALAWI/2026-27/0001`) | View | View |
+| **Excel import** — upload → dry-run review (flags, note rows) → import → rollback | — | Yes |
+| **Dashboard** — KPIs, today's tasks, low stock, clickable register cards | Reduced | + charts (each with table view and CSV), recent activity |
+| **Print / Excel** — every register prints in a paper-book layout; the "अधिक्षकाची सही" column becomes "Approved by … on …" | Yes | Yes |
+
+No child records are kept (client decision): the daily child count is a number on each entry, and personal items are recorded by item and quantity.
+
+## Quick start
+
+Requires Node 24+ and a MongoDB replica set (MongoDB Atlas works; Prisma needs a replica set for transactions).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env      # set MONGODB_URI / DATABASE_URL and SESSION_SECRET
+npm run db:push           # creates collections and indexes
+npm run db:seed           # Palawi + Prabha-Hira Pratishthan + 2 users + 90-item master
+npm run build && npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Seed logins (change the passwords in **Settings** after first login):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Role | Login (phone or email) | Password |
+|---|---|---|
+| Admin (can also add clients) | `9000000001` / `admin@palawi.org` | `ChangeMe@123` |
+| Store User | `9000000002` / `store@palawi.org` | `ChangeMe@123` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+To load the gate register, sign in as admin → **Excel import** → upload `Gate Register 1jan26 to 30 Sep26.xlsx` → review → **Import records**.
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Script | What it does |
+|---|---|
+| `npm run dev` / `build` / `start` | Next.js |
+| `npm test` | Unit tests + MongoDB tenant-isolation tests (throwaway `<db>-test` database, dropped afterwards) |
+| `npm run typecheck` / `lint` | `tsc --noEmit` / ESLint |
+| `npm run db:push` | Sync Prisma schema (collections, indexes) to MongoDB |
+| `npm run db:seed` | Idempotent seed |
+| `npm run palette` / `icons` | Re-extract colour tokens / PWA icons from `public/palawi-logo.png` |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Next.js 15 (App Router) + TypeScript**, server components and server actions (forms also work without JavaScript); Tailwind CSS 3.4.
+- **MongoDB + Prisma 6.** Every tenant document has `clientId` (and `institutionId` for branch data).
+  `tenantDb(clientId)` (`src/lib/tenant.ts`) forces `clientId` into every query, stamps it on every create, rejects
+  cross-tenant writes and hides soft-deleted rows (`deletedAt: { isSet: false }` — on MongoDB unset fields are missing, not null).
+- **One generic register engine** (`src/lib/modules.ts` config + `src/lib/entries.ts`): each paper register is a config
+  (categories, line mode, header fields). All stock-moving registers post to one **stock ledger** (`stock_movements`);
+  balance = sum of **approved** movements, never an editable number. Ledger maths: `src/lib/stock.ts` (unit tested).
+- **Approval workflow**: entries start Pending; admin approves (stock check against approved stock; a reason is required to
+  approve into negative stock), rejects with reason, unlocks with reason, or approves a whole day. Approved entries are locked.
+  Everything is written to the audit log.
+- **Gate import** (`src/lib/gate.ts`, `src/lib/gate-import.ts`): canonical purposes ("school/Collage Visit" → School/college),
+  DOB placeholders and corrupt dates flagged (a header dated year 26184 is inferred as the next day), mobiles normalised,
+  visitors de-duplicated; a failed import cleans up after itself.
+- **i18n**: `next-intl`, `messages/mr.json` + `messages/en.json` (Marathi default), DD/MM/YYYY, ₹ Indian grouping, optional Marathi numerals.
+- **Receipts**: pdfkit with Noto Sans + Noto Sans Devanagari (proper conjunct shaping), Marathi and English on one receipt.
 
-## Deploy on Vercel
+## Design tokens (extracted from the logo)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`scripts/extract-palette.mjs` samples the logo and writes `src/styles/tokens.json` / `tokens.css`: teal `#60b191`,
+leaf `#cde494`, skin accent `#e6ad9a`; buttons use `primary-600/700` (AA contrast with white). Red is used only for alerts.
+Charts use two logo-hue colours with raised chroma (`#1b7a57`, `#9cc22e`), validated for colour-blind separation; any chart
+with more categories uses single-colour bars, and every chart has a table view and CSV export.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Still to confirm with Palawi
+
+- Marathi spelling of the name ("पलावी") and tagline ("जीवनाचा स्पर्श").
+- The item list (seeded as editable defaults) and reorder levels.
+- 80G details on donation receipts.
+- Legal retention period for records.
+- A higher-resolution logo (the PNG is 185×70).
+
+Not built yet: OTP login, offline drafts with sync (PWA is installable but online-only), bill photo upload on expenses,
+automated backups (use Atlas backups), recipe-based auto-deduction from meals.
+
+## Notes for this development machine
+
+Windows Application Control blocks several downloaded native binaries (git, esbuild, Next's SWC binary, Tailwind 4,
+`@parcel/watcher`), so: Next uses its WASM compiler (`next start` can take ~3.5 minutes to become ready here), Tailwind 3.4,
+`next-intl` pinned to 4.4.0, and tests run on Node's built-in runner.
