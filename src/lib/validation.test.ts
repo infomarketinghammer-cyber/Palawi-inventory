@@ -27,7 +27,7 @@ test("users need a phone or an email; phone is normalised", () => {
 test("codes are upper-cased and restricted", () => {
   const client = clientCreateSchema.shape.client;
   assert.equal(client.safeParse({ code: "palawi-2", nameMr: "अ", nameEn: "A" }).data?.code, "PALAWI-2");
-  assert.equal(client.safeParse({ code: "पलावी", nameMr: "अ", nameEn: "A" }).success, false);
+  assert.equal(client.safeParse({ code: "पालवी", nameMr: "अ", nameEn: "A" }).success, false);
 });
 
 test("echo never sends passwords back", () => {

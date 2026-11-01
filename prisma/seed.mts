@@ -25,7 +25,7 @@ async function main() {
     (await prisma.client.create({
       data: {
         code: "PALAWI",
-        nameMr: "पलावी", // [CONFIRM] Marathi spelling with the client
+        nameMr: "पालवी",
         nameEn: "Palawi",
         taglineMr: "जीवनाचा स्पर्श", // [CONFIRM]
         taglineEn: "a touch of life",

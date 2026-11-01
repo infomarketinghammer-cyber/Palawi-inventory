@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Palawi — पलावी",
+    name: "Palawi — पालवी",
     short_name: "Palawi",
-    description: "Palawi inventory & operations / पलावी साठा व कामकाज नोंदवही",
+    description: "Palawi inventory & operations / पालवी साठा व कामकाज नोंदवही",
     start_url: "/",
     display: "standalone",
     background_color: "#f6fbf9",

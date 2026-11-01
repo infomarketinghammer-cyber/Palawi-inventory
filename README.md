@@ -77,7 +77,7 @@ with more categories uses single-colour bars, and every chart has a table view a
 
 ## Still to confirm with Palawi
 
-- Marathi spelling of the name ("पलावी") and tagline ("जीवनाचा स्पर्श").
+- Marathi tagline ("जीवनाचा स्पर्श"). The name is spelled "पालवी" (confirmed).
 - The item list (seeded as editable defaults) and reorder levels.
 - 80G details on donation receipts.
 - Legal retention period for records.
