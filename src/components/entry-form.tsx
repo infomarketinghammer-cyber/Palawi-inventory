@@ -266,7 +266,7 @@ export function EntryForm({
         </Field>
       </Card>
 
-      <Button type="submit" size="lg" disabled={pending} className="w-full sm:w-auto">
+      <Button type="submit" size="lg" loading={pending} className="w-full sm:w-auto">
         {pending ? t("common.saving") : submitLabel}
       </Button>
     </form>

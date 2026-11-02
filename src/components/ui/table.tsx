@@ -1,4 +1,6 @@
-/** Simple responsive table: scrolls horizontally inside its card on narrow screens, never the page. */
+import { ScrollX } from "./scroll-x";
+
+/** Responsive table: slides left/right inside its card on narrow screens, never the page. */
 export function DataTable({
   columns,
   rows,
@@ -10,12 +12,12 @@ export function DataTable({
 }) {
   if (rows.length === 0) return <p className="p-4 text-ink-muted sm:p-6">{empty}</p>;
   return (
-    <div className="overflow-x-auto">
+    <ScrollX>
       <table className="w-full min-w-[36rem] border-collapse text-left">
         <thead>
           <tr className="border-b border-primary-100 bg-primary-50">
             {columns.map((c) => (
-              <th key={c} scope="col" className="px-4 py-3 text-sm font-semibold text-primary-900">
+              <th key={c} scope="col" className="whitespace-nowrap px-4 py-3 text-sm font-semibold text-primary-900">
                 {c}
               </th>
             ))}
@@ -25,7 +27,7 @@ export function DataTable({
           {rows.map((r) => (
             <tr key={r.key} className="border-b border-primary-50 align-top last:border-0">
               {r.cells.map((cell, i) => (
-                <td key={i} className="px-4 py-3">
+                <td key={i} className="min-w-[7rem] px-4 py-3">
                   {cell}
                 </td>
               ))}
@@ -33,6 +35,6 @@ export function DataTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollX>
   );
 }

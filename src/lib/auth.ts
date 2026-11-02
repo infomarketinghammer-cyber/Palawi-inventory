@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "./db";
@@ -6,7 +7,8 @@ import { SESSION_COOKIE, SESSION_MAX_AGE, signSession, verifySession, type Sessi
 
 export type { Session };
 
-export async function getSession(): Promise<Session | null> {
+// Cached per request: the layout and the page both ask, but the database is checked once.
+export const getSession = cache(async (): Promise<Session | null> => {
   const store = await cookies();
   const session = await verifySession(store.get(SESSION_COOKIE)?.value);
   if (!session) return null;
@@ -16,7 +18,7 @@ export async function getSession(): Promise<Session | null> {
     select: { id: true },
   });
   return user ? session : null;
-}
+});
 
 export async function startSession(session: Session) {
   const store = await cookies();

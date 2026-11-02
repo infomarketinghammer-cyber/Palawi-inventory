@@ -53,7 +53,7 @@ export function NewClientForm() {
           />
         </fieldset>
 
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" loading={pending}>
           {pending ? t("common.saving") : t("common.save")}
         </Button>
       </form>

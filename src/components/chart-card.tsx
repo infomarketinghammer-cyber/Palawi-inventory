@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { ALERT, AXIS, GRID, SERIES } from "@/lib/chart-colors";
 import { Card } from "./ui/card";
+import { ScrollX } from "./ui/scroll-x";
 
 export type ChartRow = { label: string; alert?: boolean } & Record<string, string | number | boolean | undefined>;
 export type Series = { key: string; label: string };
@@ -92,8 +93,8 @@ export function ChartCard({
       {empty ? (
         <p className="py-8 text-center text-ink-muted">{labels.noData}</p>
       ) : view === "table" ? (
-        <div className="max-h-80 overflow-auto">
-          <table className="w-full text-sm">
+        <ScrollX className="max-h-80 overflow-y-auto">
+          <table className="w-full whitespace-nowrap text-sm">
             <thead>
               <tr className="border-b border-primary-100 text-left">
                 <th scope="col" className="py-1 pr-2">{labels.item}</th>
@@ -116,7 +117,7 @@ export function ChartCard({
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollX>
       ) : (
         <div style={{ height }} role="img" aria-label={title}>
           <ResponsiveContainer width="100%" height="100%">

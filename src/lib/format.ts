@@ -69,6 +69,14 @@ export function maskMobile(mobile: string | null | undefined): string {
   return mobile.length < 6 ? "XXXX" : `${mobile.slice(0, 2)}${"X".repeat(mobile.length - 5)}${mobile.slice(-3)}`;
 }
 
+/**
+ * Makes search text literal. Prisma passes `contains` / `startsWith` to MongoDB as a regular expression
+ * without escaping, so "(" would crash the query and "." would match anything.
+ */
+export function literalSearch(q: string): string {
+  return q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /** Normalise an Indian mobile number to 10 digits, or null if it cannot be. */
 export function normalizeMobile(input: string | number | null | undefined): string | null {
   if (input === null || input === undefined) return null;

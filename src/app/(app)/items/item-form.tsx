@@ -68,7 +68,7 @@ export function ItemForm({ action, initial }: { action: (p: ActionState, fd: For
         <span>{t("items.trackExpiry")}</span>
       </label>
       <div className="sm:col-span-2">
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" loading={pending}>
           {pending ? t("common.saving") : t("common.save")}
         </Button>
       </div>

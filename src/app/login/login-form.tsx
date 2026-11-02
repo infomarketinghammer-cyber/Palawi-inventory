@@ -41,7 +41,7 @@ export function LoginForm() {
           </button>
         </div>
       </Field>
-      <Button type="submit" size="lg" className="w-full" disabled={pending}>
+      <Button type="submit" size="lg" className="w-full" loading={pending}>
         {t("submit")}
       </Button>
     </form>

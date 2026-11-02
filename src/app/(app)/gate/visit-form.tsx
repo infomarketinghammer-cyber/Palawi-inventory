@@ -148,7 +148,7 @@ export function VisitForm({ items, today }: { items: ItemOption[]; today: string
         </Card>
       )}
 
-      <Button type="submit" size="lg" disabled={pending} className="w-full sm:w-auto">
+      <Button type="submit" size="lg" loading={pending} className="w-full sm:w-auto">
         {pending ? t("common.saving") : t("common.save")}
       </Button>
     </form>

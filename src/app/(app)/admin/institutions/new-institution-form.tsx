@@ -27,7 +27,7 @@ export function NewInstitutionForm() {
         <TextField name="cityEn" label={opt(t("institutions.cityEn"))} state={state} lang="en" />
         <TextField name="address" label={opt(t("institutions.address"))} state={state} className="sm:col-span-2" />
         <div className="sm:col-span-2">
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" loading={pending}>
             {pending ? t("common.saving") : t("common.save")}
           </Button>
         </div>

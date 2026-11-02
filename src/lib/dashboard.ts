@@ -1,5 +1,6 @@
 import "server-only";
-import type { TenantDb } from "./tenant";
+import { cache } from "react";
+import { tenantDb, type TenantDb } from "./tenant";
 import type { Session } from "./session-token";
 import { stockRows } from "./stock-view";
 import { todayIST } from "./entry-form";
@@ -10,18 +11,20 @@ import type { AppLocale } from "./format";
 const DAY = 86400000;
 const DAILY_REGISTERS = ["grain", "meals", "vegetables", "fruit"] as const;
 
-/** Everything the home dashboard shows, computed in one place. Child-identifying data is never used. */
+// Shared by the KPI block and the charts, which render separately within one request.
+const cachedStock = cache((clientId: string, institutionId: string, locale: AppLocale) => stockRows(tenantDb(clientId), institutionId, locale));
+
+/** KPIs, today's tasks and low stock: the quick part of the home page. Child-identifying data is never used. */
 export async function dashboardData(db: TenantDb, session: Session, locale: AppLocale) {
   const institutionId = session.institutionId!;
   const inst = { institutionId };
   const today = todayIST();
   const todayDate = dayToDate(today);
   const monthStart = dayToDate(`${today.slice(0, 7)}-01`);
-  const yearStart = dayToDate(`${today.slice(0, 4)}-01-01`);
   const isAdmin = session.role === "ADMIN";
 
   const [stock, latestCount, todayEntries, pendingEntries, pendingVisits, donationsMonth, visitsToday] = await Promise.all([
-    stockRows(db, institutionId, locale),
+    cachedStock(session.clientId, institutionId, locale),
     db.entry.findFirst({ where: { ...inst, childCount: { not: null } }, orderBy: { date: "desc" }, select: { childCount: true } }),
     db.entry.findMany({ where: { ...inst, date: todayDate }, select: { module: true, status: true, fields: true } }),
     db.entry.findMany({
@@ -49,27 +52,35 @@ export async function dashboardData(db: TenantDb, session: Session, locale: AppL
     donations: donationsMonth.length,
     donationCash: round(donationsMonth.reduce((s, d) => s + (d.amount ?? 0), 0)),
     visitorsToday: visitsToday,
-    costPerChildDay: null as number | null,
   };
-  const base = { kpis, missingToday, lowStock: lowStock.slice(0, 8), myPending: pendingEntries.slice(0, 8), filledToday: [...filledToday] };
-  if (!isAdmin) return { ...base, charts: null };
+  return { kpis, missingToday, lowStock: lowStock.slice(0, 8), myPending: pendingEntries.slice(0, 8), filledToday: [...filledToday] };
+}
 
+/** The admin charts. Loaded after the KPIs so the page appears quickly. */
+export async function dashboardCharts(db: TenantDb, session: Session, locale: AppLocale) {
+  const institutionId = session.institutionId!;
+  const inst = { institutionId };
+  const today = todayIST();
+  const todayDate = dayToDate(today);
+  const monthStart = dayToDate(`${today.slice(0, 7)}-01`);
+  const yearStart = dayToDate(`${today.slice(0, 4)}-01-01`);
   const since30 = new Date(todayDate.getTime() - 29 * DAY);
   const since12w = new Date(todayDate.getTime() - 83 * DAY);
   const since6m = dayToDate(new Date(Date.UTC(todayDate.getUTCFullYear(), todayDate.getUTCMonth() - 5, 1)).toISOString().slice(0, 10));
-  const kgItems = await db.item.findMany({ where: { unit: "kg" }, select: { id: true, category: true, group: true } });
-  const kgIds = kgItems.map((i) => i.id);
-  const groupOf = new Map(kgItems.map((i) => [i.id, i.group]));
+  // Kilogram totals: movements are grouped per item and filtered to kg items in memory, so every query runs in parallel.
+  const kg = { unit: "kg" };
 
-  const [consumption, inOut, vegMonth, fruit, monthEntries, visitsByDay, purposes, newRepeat, donationTypes, donationMonthly, expenses, recent] = await Promise.all([
+  const [stock, kgItems, kgMoves30, kgMoves12w, vegMonth, fruit, mealEntries, visitsByDay, purposes, newRepeat, donationTypes, donationMonthly, expenses, pendingByModule, recent] = await Promise.all([
+    cachedStock(session.clientId, institutionId, locale),
+    db.item.findMany({ where: kg, select: { id: true, group: true } }),
     db.stockMovement.groupBy({
-      by: ["date"],
-      where: { ...inst, status: "APPROVED", module: "grain", direction: "OUT", itemId: { in: kgIds }, date: { gte: since30 } },
+      by: ["date", "itemId"],
+      where: { ...inst, status: "APPROVED", module: "grain", direction: "OUT", date: { gte: since30 } },
       _sum: { qty: true },
     }),
     db.stockMovement.groupBy({
-      by: ["date", "direction"],
-      where: { ...inst, status: "APPROVED", itemId: { in: kgIds }, date: { gte: since12w }, module: { notIn: ["vegetables", "fruit"] } },
+      by: ["date", "direction", "itemId"],
+      where: { ...inst, status: "APPROVED", date: { gte: since12w }, module: { notIn: ["vegetables", "fruit"] } },
       _sum: { qty: true },
     }),
     db.stockMovement.groupBy({
@@ -82,18 +93,21 @@ export async function dashboardData(db: TenantDb, session: Session, locale: AppL
       where: { ...inst, status: "APPROVED", module: "fruit", direction: "IN", date: { gte: since6m } },
       _sum: { qty: true },
     }),
-    db.entry.findMany({ where: { ...inst, date: { gte: monthStart } }, select: { module: true, date: true, status: true, childCount: true, fields: true, lines: true } }),
+    db.entry.findMany({ where: { ...inst, module: "meals", date: { gte: monthStart } }, select: { date: true, status: true } }),
     db.visit.groupBy({ by: ["date"], where: { ...inst, date: { gte: yearStart } }, _count: { _all: true } }),
     db.visit.groupBy({ by: ["purpose"], where: { ...inst, date: { gte: yearStart } }, _count: { _all: true } }),
     Promise.all([db.visitor.count({ where: { ...inst, visitCount: 1 } }), db.visitor.count({ where: { ...inst, visitCount: { gt: 1 } } })]),
     db.donation.groupBy({ by: ["type"], where: { ...inst, date: { gte: yearStart }, status: { not: "REJECTED" } }, _count: { _all: true } }),
     db.donation.groupBy({ by: ["date"], where: { ...inst, date: { gte: yearStart }, status: { not: "REJECTED" } }, _count: { _all: true } }),
     db.entry.findMany({ where: { ...inst, module: "expenses", status: "APPROVED", date: { gte: yearStart } }, select: { fields: true, date: true } }),
+    db.entry.groupBy({ by: ["module"], where: { ...inst, status: "PENDING" }, _count: { _all: true } }),
     db.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 8, include: { user: { select: { name: true } } } }),
   ]);
+  const groupOf = new Map(kgItems.map((i) => [i.id, i.group]));
 
   // Daily consumption (kg) with a 7-day moving average.
-  const consMap = new Map(consumption.map((c) => [dateToDay(c.date), c._sum.qty ?? 0]));
+  const consMap = new Map<string, number>();
+  for (const c of kgMoves30) if (groupOf.has(c.itemId)) consMap.set(dateToDay(c.date), (consMap.get(dateToDay(c.date)) ?? 0) + (c._sum.qty ?? 0));
   const consDays = Array.from({ length: 30 }, (_, i) => dateToDay(new Date(since30.getTime() + i * DAY)));
   const consumptionSeries = consDays.map((d, i) => {
     const window = consDays.slice(Math.max(0, i - 6), i + 1).map((x) => consMap.get(x) ?? 0);
@@ -107,7 +121,8 @@ export async function dashboardData(db: TenantDb, session: Session, locale: AppL
     const w = weekOf(new Date(since12w.getTime() + i * 7 * DAY));
     weeks.set(w, { week: w, in: 0, out: 0 });
   }
-  for (const r of inOut) {
+  for (const r of kgMoves12w) {
+    if (!groupOf.has(r.itemId)) continue;
     const w = weeks.get(weekOf(r.date));
     if (w) w[r.direction === "IN" ? "in" : "out"] = round(w[r.direction === "IN" ? "in" : "out"] + (r._sum.qty ?? 0));
   }
@@ -130,20 +145,8 @@ export async function dashboardData(db: TenantDb, session: Session, locale: AppL
 
   // Meal completeness for each day of this month so far.
   const mealDays = Array.from({ length: Number(today.slice(8, 10)) }, (_, i) => `${today.slice(0, 7)}-${String(i + 1).padStart(2, "0")}`);
-  const mealByDay = new Map(monthEntries.filter((e) => e.module === "meals").map((e) => [dateToDay(e.date), e.status]));
+  const mealByDay = new Map(mealEntries.map((e) => [dateToDay(e.date), e.status]));
   const mealCompleteness = mealDays.map((d) => ({ day: d, state: mealByDay.get(d) === "APPROVED" ? "approved" : mealByDay.has(d) ? "filled" : "missing" }));
-
-  // Cost per child per day (month to date): expenses + purchase amounts over child-days.
-  const childDays = new Map<string, number>();
-  let spend = 0;
-  for (const e of monthEntries) {
-    if (e.childCount != null) childDays.set(dateToDay(e.date), Math.max(childDays.get(dateToDay(e.date)) ?? 0, e.childCount));
-    if (e.status !== "APPROVED") continue;
-    if (e.module === "expenses") spend += Number(((e.fields ?? {}) as Record<string, unknown>).total ?? 0);
-    if (e.module === "purchase") spend += e.lines.reduce((s, l) => s + (l.amount ?? 0), 0);
-  }
-  const cd = [...childDays.values()].reduce((a, b) => a + b, 0);
-  kpis.costPerChildDay = cd > 0 && spend > 0 ? round(spend / cd) : null;
 
   const visitsMonthly = new Map<string, number>();
   const weekday = Array(7).fill(0) as number[];
@@ -160,8 +163,6 @@ export async function dashboardData(db: TenantDb, session: Session, locale: AppL
     const c = String(f.category ?? "OTHER");
     expenseCats.set(c, round((expenseCats.get(c) ?? 0) + Number(f.total ?? 0)));
   }
-  const pendingByModule = new Map<string, number>();
-  for (const p of pendingEntries) pendingByModule.set(p.module, (pendingByModule.get(p.module) ?? 0) + 1);
 
   const sortedPurposes = purposes
     .map((p) => ({ purpose: p.purpose ?? "NONE", count: p._count._all }))
@@ -170,34 +171,32 @@ export async function dashboardData(db: TenantDb, session: Session, locale: AppL
   const otherCount = sortedPurposes.slice(10).reduce((s, p) => s + p.count, 0);
 
   return {
-    ...base,
-    charts: {
-      stockLevels: stock
-        .filter((s) => s.reorderLevel)
-        .sort((a, b) => a.balance / (a.reorderLevel || 1) - b.balance / (b.reorderLevel || 1))
-        .slice(0, 12)
-        .map((s) => ({ name: s.name, unit: s.unit, balance: s.balance, reorder: s.reorderLevel ?? 0, alert: s.status !== "ok" })),
-      daysLeft: stock
-        .filter((s) => s.daysLeft !== null)
-        .sort((a, b) => a.daysLeft! - b.daysLeft!)
-        .slice(0, 10)
-        .map((s) => ({ name: s.name, days: s.daysLeft!, alert: s.daysLeft! <= 7 })),
-      consumption: consumptionSeries,
-      inOut: [...weeks.values()],
-      vegGroups: [...veg].map(([group, kg]) => ({ group, kg })),
-      fruit: [...fruitMonths.values()],
-      mealCompleteness,
-      visitsMonthly: [...visitsMonthly].sort().map(([month, count]) => ({ month, count })),
-      weekday,
-      purposes: otherCount ? [...topPurposes, { purpose: "OTHER_REST", count: otherCount }] : topPurposes,
-      newRepeat: { new: newRepeat[0], repeat: newRepeat[1] },
-      donationTypes: donationTypes.map((d) => ({ type: d.type, count: d._count._all })).sort((a, b) => b.count - a.count),
-      donationsMonthly: [...donationsByMonth].sort().map(([month, count]) => ({ month, count })),
-      expenses: [...expenseCats].map(([category, total]) => ({ category, total })).sort((a, b) => b.total - a.total),
-      pendingByModule: [...pendingByModule].map(([module, count]) => ({ module, count })).sort((a, b) => b.count - a.count),
-      recent: recent.map((r) => ({ id: r.id, at: r.createdAt, who: r.user?.name ?? null, action: r.action, entity: r.entity })),
-    },
+    stockLevels: stock
+      .filter((s) => s.reorderLevel)
+      .sort((a, b) => a.balance / (a.reorderLevel || 1) - b.balance / (b.reorderLevel || 1))
+      .slice(0, 12)
+      .map((s) => ({ name: s.name, unit: s.unit, balance: s.balance, reorder: s.reorderLevel ?? 0, alert: s.status !== "ok" })),
+    daysLeft: stock
+      .filter((s) => s.daysLeft !== null)
+      .sort((a, b) => a.daysLeft! - b.daysLeft!)
+      .slice(0, 10)
+      .map((s) => ({ name: s.name, days: s.daysLeft!, alert: s.daysLeft! <= 7 })),
+    consumption: consumptionSeries,
+    inOut: [...weeks.values()],
+    vegGroups: [...veg].map(([group, kg]) => ({ group, kg })),
+    fruit: [...fruitMonths.values()],
+    mealCompleteness,
+    visitsMonthly: [...visitsMonthly].sort().map(([month, count]) => ({ month, count })),
+    weekday,
+    purposes: otherCount ? [...topPurposes, { purpose: "OTHER_REST", count: otherCount }] : topPurposes,
+    newRepeat: { new: newRepeat[0], repeat: newRepeat[1] },
+    donationTypes: donationTypes.map((d) => ({ type: d.type, count: d._count._all })).sort((a, b) => b.count - a.count),
+    donationsMonthly: [...donationsByMonth].sort().map(([month, count]) => ({ month, count })),
+    expenses: [...expenseCats].map(([category, total]) => ({ category, total })).sort((a, b) => b.total - a.total),
+    pendingByModule: pendingByModule.map((p) => ({ module: p.module, count: p._count._all })).sort((a, b) => b.count - a.count),
+    recent: recent.map((r) => ({ id: r.id, at: r.createdAt, who: r.user?.name ?? null, action: r.action, entity: r.entity })),
   };
 }
 
 export type DashboardData = Awaited<ReturnType<typeof dashboardData>>;
+export type DashboardCharts = Awaited<ReturnType<typeof dashboardCharts>>;

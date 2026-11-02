@@ -50,9 +50,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           { href: "/audit", label: t("nav.audit"), icon: "history", group: t("nav.administration") },
         ] as NavItem[])
       : []),
-    ...(session.canManageClients
-      ? ([{ href: "/admin/clients", label: t("nav.clients"), icon: "globe", group: t("nav.administration") }] as NavItem[])
-      : []),
     { href: "/settings", label: t("nav.settings"), icon: "settings" },
   ];
 

@@ -7,6 +7,10 @@
   "common": {
     "save": "Save",
     "saving": "Saving…",
+    "loading": "Loading…",
+    "scrollLeft": "Slide left",
+    "scrollRight": "Slide right",
+    "scrollTable": "Table — slide sideways to see every column",
     "cancel": "Cancel",
     "add": "Add",
     "actions": "Actions",
@@ -557,8 +561,7 @@
       "pending": "Pending approval",
       "meals": "Today's meals ({count}/4)",
       "donations": "Donations this month",
-      "visitorsToday": "Visitors today",
-      "costPerChild": "Cost per child per day"
+      "visitorsToday": "Visitors today"
     },
     "charts": {
       "stockLevels": "Stock vs reorder level",

@@ -62,7 +62,7 @@ export function ActionForm({
           <Input id={`${id}-o`} name={reasonOnError.name} required />
         </Field>
       )}
-      <Button type="submit" variant={variant} disabled={pending}>
+      <Button type="submit" variant={variant} loading={pending}>
         {label}
       </Button>
     </form>

@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { AlertTriangle, Plus, Search, Users } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { tenantDb } from "@/lib/tenant";
-import { formatDate, formatNumber, maskMobile } from "@/lib/format";
+import { formatDate, formatNumber, literalSearch, maskMobile } from "@/lib/format";
 import { getFormatPrefs } from "@/lib/i18n-helpers";
 import { monthRange, validMonth } from "@/lib/ui-data";
 import { dateToDay } from "@/lib/entries";
@@ -32,7 +32,7 @@ export default async function GatePage({ searchParams }: { searchParams: Promise
     where: {
       ...(session.institutionId ? { institutionId: session.institutionId } : {}),
       ...(q
-        ? { OR: [{ visitorName: { contains: q, mode: "insensitive" } }, { mobile: { contains: q.replace(/\D/g, "") || q } }] }
+        ? { OR: [{ visitorName: { contains: literalSearch(q), mode: "insensitive" } }, { mobile: { contains: literalSearch(q.replace(/\D/g, "") || q) } }] }
         : { date: { gte: start, lt: end } }),
     },
     orderBy: [{ date: "desc" }, { serialNo: "asc" }],

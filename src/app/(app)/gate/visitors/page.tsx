@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Search } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { tenantDb } from "@/lib/tenant";
-import { formatDate, formatNumber, maskMobile } from "@/lib/format";
+import { formatDate, formatNumber, literalSearch, maskMobile } from "@/lib/format";
 import { getFormatPrefs } from "@/lib/i18n-helpers";
 import { Card, PageHeader } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/table";
@@ -18,7 +18,7 @@ export default async function VisitorsPage({ searchParams }: { searchParams: Pro
   const visitors = await tenantDb(session.clientId).visitor.findMany({
     where: {
       ...(session.institutionId ? { institutionId: session.institutionId } : {}),
-      ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { mobile: { contains: q.replace(/\D/g, "") || q } }] } : {}),
+      ...(q ? { OR: [{ name: { contains: literalSearch(q), mode: "insensitive" } }, { mobile: { contains: literalSearch(q.replace(/\D/g, "") || q) } }] } : {}),
     },
     orderBy: [{ visitCount: "desc" }, { lastVisitAt: "desc" }],
     take: 200,

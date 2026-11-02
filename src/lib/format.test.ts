@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatDate, formatDateTime, formatINR, formatNumber, localName, maskMobile, normalizeMobile, toDevanagariDigits } from "./format.ts";
+import { formatDate, formatDateTime, formatINR, formatNumber, literalSearch, localName, maskMobile, normalizeMobile, toDevanagariDigits } from "./format.ts";
+
+test("search text is matched literally, not as a pattern", () => {
+  assert.equal(literalSearch("Patil (Pune)"), "Patil \\(Pune\\)");
+  assert.equal(literalSearch("a.b*"), "a\\.b\\*");
+  assert.ok(new RegExp(literalSearch("[DEMO]")).test("[DEMO] x"));
+  assert.ok(!new RegExp(literalSearch("[DEMO]")).test("Donation"));
+});
 
 test("Indian digit grouping", () => {
   assert.equal(formatNumber(1234567.891), "12,34,567.89");

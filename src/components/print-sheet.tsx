@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { buttonVariants } from "./ui/button";
 import { PrintButton } from "./print-button";
+import { ScrollX } from "./ui/scroll-x";
 
 /** Paper-register style sheet: institution heading, register title, month, bordered table. */
 export function PrintSheet({
@@ -45,12 +46,12 @@ export function PrintSheet({
         {rows.length === 0 ? (
           <p className="text-center text-ink-muted">{empty}</p>
         ) : (
-          <div className="overflow-x-auto print:overflow-visible">
+          <ScrollX>
             <table className="w-full border-collapse text-sm print:text-xs">
               <thead>
                 <tr>
                   {columns.map((c) => (
-                    <th key={c} scope="col" className="border border-ink px-2 py-1 text-left font-semibold">
+                    <th key={c} scope="col" className="whitespace-nowrap border border-ink px-2 py-1 text-left font-semibold print:whitespace-normal">
                       {c}
                     </th>
                   ))}
@@ -68,7 +69,7 @@ export function PrintSheet({
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollX>
         )}
         <p className="mt-4 text-right text-xs text-ink-muted">{printedOn}</p>
       </article>

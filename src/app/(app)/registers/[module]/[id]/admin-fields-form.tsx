@@ -37,7 +37,7 @@ export function AdminFieldsForm({
         </Field>
       ))}
       <div className="sm:col-span-2">
-        <Button type="submit" variant="secondary" disabled={pending}>
+        <Button type="submit" variant="secondary" loading={pending}>
           {submitLabel}
         </Button>
       </div>

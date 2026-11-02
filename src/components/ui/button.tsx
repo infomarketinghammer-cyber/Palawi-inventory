@@ -1,4 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const buttonVariants = cva(
@@ -22,8 +23,14 @@ export const buttonVariants = cva(
   },
 );
 
-type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants>;
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants> & { loading?: boolean };
 
-export function Button({ className, variant, size, ...props }: ButtonProps) {
-  return <button className={cn(buttonVariants({ variant, size }), className)} {...props} />;
+/** `loading` disables the button and shows a spinner (e.g. while a form is being saved). */
+export function Button({ className, variant, size, loading, disabled, children, ...props }: ButtonProps) {
+  return (
+    <button className={cn(buttonVariants({ variant, size }), className)} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>
+      {loading && <Loader2 size={size === "sm" ? 14 : 18} aria-hidden className="shrink-0 animate-spin" />}
+      {children}
+    </button>
+  );
 }

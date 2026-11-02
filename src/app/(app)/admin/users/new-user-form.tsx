@@ -60,7 +60,7 @@ export function NewUserForm({ institutions }: { institutions: { id: string; name
         </dl>
 
         <div className="sm:col-span-2">
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" loading={pending}>
             {pending ? t("common.saving") : t("common.save")}
           </Button>
         </div>

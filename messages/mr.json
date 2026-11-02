@@ -7,6 +7,10 @@
   "common": {
     "save": "जतन करा",
     "saving": "जतन होत आहे…",
+    "loading": "लोड होत आहे…",
+    "scrollLeft": "डावीकडे सरकवा",
+    "scrollRight": "उजवीकडे सरकवा",
+    "scrollTable": "तक्ता — बाजूला सरकवून सर्व स्तंभ पाहा",
     "cancel": "रद्द करा",
     "add": "जोडा",
     "actions": "क्रिया",
@@ -557,8 +561,7 @@
       "pending": "मंजुरी प्रलंबित",
       "meals": "आजचे आहार ({count}/४)",
       "donations": "या महिन्यातील देणग्या",
-      "visitorsToday": "आजचे अभ्यागत",
-      "costPerChild": "प्रति मूल प्रति दिवस खर्च"
+      "visitorsToday": "आजचे अभ्यागत"
     },
     "charts": {
       "stockLevels": "साठा व किमान पातळी",

@@ -19,7 +19,7 @@ export function UploadForm() {
       <Field id="file" label={t("file")}>
         <Input id="file" name="file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required className="py-1.5" />
       </Field>
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" loading={pending}>
         <Upload size={18} aria-hidden />
         {pending ? "…" : t("upload")}
       </Button>

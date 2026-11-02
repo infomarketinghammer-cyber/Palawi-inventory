@@ -22,7 +22,7 @@ export function PasswordForm() {
         <TextField name="next" label={t("settings.newPassword")} state={state} type="password" autoComplete="new-password" required />
         <TextField name="confirm" label={t("settings.confirmPassword")} state={state} type="password" autoComplete="new-password" required />
         <div>
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" loading={pending}>
             {pending ? t("common.saving") : t("common.save")}
           </Button>
         </div>

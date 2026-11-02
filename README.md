@@ -48,7 +48,15 @@ To load the gate register, sign in as admin → **Excel import** → upload `Gat
 | `npm run typecheck` / `lint` | `tsc --noEmit` / ESLint |
 | `npm run db:push` | Sync Prisma schema (collections, indexes) to MongoDB |
 | `npm run db:seed` | Idempotent seed |
+| `node scripts/demo-data.mts` | Adds sample records (15+ per register, gate visits, donations) marked "DEMO SAMPLE", for training and demos; `--remove` deletes exactly those again |
 | `npm run palette` / `icons` | Re-extract colour tokens / PWA icons from `public/palawi-logo.png` |
+
+## Deploying on Vercel
+
+`vercel.json` pins the server functions to **Mumbai (`bom1`)**, next to the MongoDB Atlas cluster (AWS `ap-south-1`).
+Vercel's default region is Washington DC, which adds ~200 ms to every database call. If the database moves to
+another region, change `regions` to match. Set `DATABASE_URL`, `MONGODB_URI`, `MONGODB_DB` and `SESSION_SECRET` in the
+Vercel project's environment variables.
 
 ## Architecture
 
