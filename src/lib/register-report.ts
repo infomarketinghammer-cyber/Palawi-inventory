@@ -59,13 +59,31 @@ export async function registerReport(session: Session, module: ModuleKey, month:
     };
   }
 
-  // Item registers: one row per line. Running balance (approved only) for stock-holding registers.
+  // Item registers: one row per line. Running balance (approved only) for registers that take from stock.
+  // Stock arrives through other registers (mainly Stock in), so their approved movements in the month are
+  // applied in date order too: the morning's purchase shows up in the opening of that day's consumption.
   const running = new Map<string, number>();
-  const holdsStock = cfg.lineMode === "inout" || cfg.lineMode === "out";
+  const holdsStock = cfg.lineMode === "out";
+  const others: { itemId: string; qty: number; direction: string; date: Date; createdAt: Date }[] = [];
   if (holdsStock && session.institutionId) {
-    const before = await getBalances(db, session.institutionId, { before: start });
+    const [before, moves] = await Promise.all([
+      getBalances(db, session.institutionId, { before: start }),
+      db.stockMovement.findMany({
+        where: { institutionId: session.institutionId, status: "APPROVED", module: { not: module }, date: { gte: start, lt: end } },
+        select: { itemId: true, qty: true, direction: true, date: true, createdAt: true },
+        orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+      }),
+    ]);
     for (const [id, b] of before) running.set(id, b.approved);
+    others.push(...moves);
   }
+  let next = 0;
+  const applyOthersBefore = (date: Date, createdAt: Date) => {
+    while (next < others.length && (others[next].date < date || (+others[next].date === +date && others[next].createdAt < createdAt))) {
+      const m = others[next++];
+      running.set(m.itemId, round((running.get(m.itemId) ?? 0) + (m.direction === "IN" ? m.qty : -m.qty)));
+    }
+  };
   const header = [cfg.childCount ? t("entries.childCount") : null, ...cfg.header.filter((h) => !h.adminOnly).map((h) => t(`entries.fields.${h.name}`))].filter(Boolean) as string[];
   const columns = [
     t("entries.date"),
@@ -73,7 +91,7 @@ export async function registerReport(session: Session, module: ModuleKey, month:
     t("entries.item"),
     ...(cfg.lineMode === "kind" ? [t("entries.kind")] : []),
     ...(holdsStock ? [t("entries.opening")] : []),
-    ...(cfg.lineMode === "inout" ? [t("entries.inQty"), t("entries.outQty")] : [t("entries.qty")]),
+    t(cfg.qtyLabel ?? "entries.qty"),
     ...(holdsStock ? [t("entries.balance")] : []),
     ...(cfg.lineExtras.includes("source") ? [t("entries.source")] : []),
     ...(module === "cleaning" ? [t("entries.medicalVerification")] : []),
@@ -83,10 +101,10 @@ export async function registerReport(session: Session, module: ModuleKey, month:
   for (const e of entries) {
     const f = (e.fields ?? {}) as Record<string, unknown>;
     const headVals = [cfg.childCount ? n(e.childCount) : null, ...cfg.header.filter((h) => !h.adminOnly).map((h) => String(f[h.name] ?? ""))].filter((v) => v !== null) as string[];
+    applyOthersBefore(e.date, e.createdAt);
     for (const l of e.lines) {
       const open = l.itemId ? running.get(l.itemId) ?? 0 : 0;
-      const delta = (cfg.lineMode === "inout" ? l.inQty ?? 0 : 0) - (l.outQty ?? 0);
-      const bal = round(open + delta);
+      const bal = round(open - (l.outQty ?? 0));
       if (holdsStock && e.status === "APPROVED" && l.itemId) running.set(l.itemId, bal);
       rows.push([
         d(e.date),
@@ -94,7 +112,7 @@ export async function registerReport(session: Session, module: ModuleKey, month:
         item(l.itemId),
         ...(cfg.lineMode === "kind" ? [t(`kinds.${l.kind}`)] : []),
         ...(holdsStock ? [n(open)] : []),
-        ...(cfg.lineMode === "inout" ? [n(l.inQty), n(l.outQty)] : [n(l.inQty ?? l.outQty)]),
+        n(cfg.lineMode === "out" ? l.outQty : l.inQty ?? l.outQty),
         ...(holdsStock ? [e.status === "APPROVED" ? n(bal) : ""] : []),
         ...(cfg.lineExtras.includes("source") ? [t(`sources.${l.source ?? "purchased"}`) + (l.donorName ? ` — ${l.donorName}` : "")] : []),
         ...(module === "cleaning" ? [f.medicalOfficerName ? t("entries.medicalVerified", { name: String(f.medicalOfficerName), date: f.medicalOfficerDate ? formatDate(`${f.medicalOfficerDate}T00:00:00Z`, { numerals }) : "" }) : ""] : []),

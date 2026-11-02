@@ -2,9 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeBalances, daysOfStock, findShortages, linesToMovements, stockStatus } from "./stock.ts";
 
-test("grain register: received is IN purchase, consumed is OUT consumption", () => {
+test("grain register only consumes: OUT consumption, never IN", () => {
   assert.deepEqual(linesToMovements("grain", [{ itemId: "rice", inQty: 25, outQty: 4.5 }]), [
-    { itemId: "rice", qty: 25, direction: "IN", type: "purchase" },
     { itemId: "rice", qty: 4.5, direction: "OUT", type: "consumption" },
   ]);
   assert.deepEqual(linesToMovements("grain", [{ itemId: "rice", inQty: 0, outQty: 0 }]), []);

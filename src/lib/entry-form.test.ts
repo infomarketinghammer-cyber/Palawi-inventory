@@ -4,16 +4,17 @@ import { parseEntry } from "./entry-form.ts";
 
 const today = "2026-10-31";
 
-test("grain entry: child count and at least one quantity per line are required", () => {
-  const r = parseEntry("grain", { date: "2026-10-30", lines: { 0: { itemId: "rice", inQty: "", outQty: "" } } }, "STORE_USER", today);
+test("grain entry: consumption only; child count and a quantity per line are required", () => {
+  const r = parseEntry("grain", { date: "2026-10-30", lines: { 0: { itemId: "rice", qty: "" } } }, "STORE_USER", today);
   assert.equal(r.ok, false);
   if (!r.ok) {
     assert.equal(r.errors.childCount, "required");
-    assert.equal(r.errors["lines.0.inQty"], "entries.qtyRequired");
+    assert.equal(r.errors["lines.0.qty"], "entries.qtyRequired");
   }
-  const ok = parseEntry("grain", { date: "2026-10-30", childCount: "30", lines: { 0: { itemId: "rice", inQty: "25", outQty: "4.5" }, 1: { itemId: "", inQty: "" } } }, "STORE_USER", today);
+  // A "received" value sent by an old form is ignored: stock only comes in through Stock in.
+  const ok = parseEntry("grain", { date: "2026-10-30", childCount: "30", lines: { 0: { itemId: "rice", qty: "4.5", inQty: "25" }, 1: { itemId: "", qty: "" } } }, "STORE_USER", today);
   assert.equal(ok.ok, true);
-  if (ok.ok) assert.deepEqual([ok.data.lines.length, ok.data.lines[0].inQty, ok.data.lines[0].outQty, ok.data.childCount], [1, 25, 4.5, 30]);
+  if (ok.ok) assert.deepEqual([ok.data.lines.length, ok.data.lines[0].inQty, ok.data.lines[0].outQty, ok.data.childCount], [1, null, 4.5, 30]);
 });
 
 test("future dates and duplicate items are rejected", () => {

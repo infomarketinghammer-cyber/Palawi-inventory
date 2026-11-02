@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/auth";
 import { tenantDb } from "@/lib/tenant";
@@ -10,6 +11,7 @@ import { VisitForm } from "../visit-form";
 
 export default async function NewVisitPage() {
   const session = await requireUser();
+  if (session.role !== "STORE_USER") redirect("/gate");
   const t = await getTranslations();
   const { locale } = await getFormatPrefs();
   const items = await loadItemOptions(tenantDb(session.clientId), CATEGORIES, locale);

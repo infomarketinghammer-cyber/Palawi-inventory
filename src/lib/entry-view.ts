@@ -23,9 +23,8 @@ export async function summarise(e: EntryLike, names: Names, numerals: NumeralSty
     const it = l.itemId ? names.get(l.itemId) : undefined;
     const unit = it ? t(`units.${it.unit}`) : "";
     const name = it?.name ?? "?";
-    if (cfg.lineMode === "inout") return `${name} +${qty(l.inQty)} −${qty(l.outQty)} ${unit}`;
     if (cfg.lineMode === "kind") return `${t(`kinds.${l.kind}`)}: ${name} ${qty(l.inQty ?? l.outQty)} ${unit}`;
-    return `${name} ${qty(l.outQty ?? l.inQty)} ${unit}`;
+    return `${name} ${qty(cfg.lineMode === "out" ? l.outQty : l.outQty ?? l.inQty)} ${unit}`;
   });
   return parts.slice(0, 4).join(", ") + (parts.length > 4 ? ` +${parts.length - 4}` : "");
 }

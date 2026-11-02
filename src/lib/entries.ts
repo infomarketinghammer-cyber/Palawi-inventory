@@ -124,10 +124,13 @@ export async function openingForEntry(db: TenantDb, entry: { id: string; institu
   return before;
 }
 
-/** Store users may edit their own pending or rejected entries; admins any pending or rejected entry. */
+/**
+ * Only the person who recorded an entry may edit or delete it, while it is pending or rejected.
+ * The admin reviews (approve / reject / unlock) but does not change store entries.
+ */
 export function canEdit(session: Session, entry: { status: string; createdById: string }) {
   if (entry.status === "APPROVED") return false;
-  return session.role === "ADMIN" || entry.createdById === session.userId;
+  return entry.createdById === session.userId;
 }
 
 export async function updateEntry(session: Session, id: string, input: EntryInput): Promise<EngineResult> {

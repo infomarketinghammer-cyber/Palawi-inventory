@@ -42,15 +42,15 @@ export default async function EntryPage({
   const editable = canEdit(session, entry);
   const hidden = { id: entry.id, module, back: `/registers/${module}/${entry.id}` };
 
-  // Opening = approved stock just before this entry; balance = opening + received − consumed in this entry.
-  const showsBalance = cfg.lineMode === "inout" || cfg.lineMode === "out";
+  // Opening = approved stock just before this entry (incl. earlier Stock in); balance = opening − taken in this entry.
+  const showsBalance = cfg.lineMode === "out";
   const opening = showsBalance ? await openingForEntry(db, entry, entry.lines.map((l) => l.itemId!).filter(Boolean)) : null;
 
   const lineColumns = [
     t("entries.item"),
     ...(cfg.lineMode === "kind" ? [t("entries.kind")] : []),
     ...(showsBalance ? [t("entries.opening")] : []),
-    ...(cfg.lineMode === "inout" ? [t("entries.inQty"), t("entries.outQty")] : [t("entries.qty")]),
+    t(cfg.qtyLabel ?? "entries.qty"),
     ...(showsBalance ? [t("entries.balance")] : []),
     ...(cfg.lineExtras.includes("source") ? [t("entries.source")] : []),
     ...(cfg.lineExtras.includes("rate") ? [t("entries.amount")] : []),
@@ -131,14 +131,14 @@ export default async function EntryPage({
               const it = l.itemId ? names.get(l.itemId) : undefined;
               const unit = it ? t(`units.${it.unit}`) : "";
               const open = opening && l.itemId ? opening.get(l.itemId)?.approved ?? 0 : 0;
-              const bal = round(open + (cfg.lineMode === "inout" ? l.inQty ?? 0 : 0) - (l.outQty ?? 0));
+              const bal = round(open - (l.outQty ?? 0));
               return {
                 key: String(i),
                 cells: [
                   `${it?.name ?? "?"} (${unit})`,
                   ...(cfg.lineMode === "kind" ? [t(`kinds.${l.kind}`)] : []),
                   ...(showsBalance ? [n(open)] : []),
-                  ...(cfg.lineMode === "inout" ? [n(l.inQty), n(l.outQty)] : [n(l.inQty ?? l.outQty)]),
+                  n(cfg.lineMode === "out" ? l.outQty : l.inQty ?? l.outQty),
                   ...(showsBalance ? [n(bal)] : []),
                   ...(cfg.lineExtras.includes("source") ? [t(`sources.${l.source ?? "purchased"}`)] : []),
                   ...(cfg.lineExtras.includes("rate") ? [l.amount != null ? formatINR(l.amount, { numerals }) : "—"] : []),

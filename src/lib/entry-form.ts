@@ -105,14 +105,18 @@ export function parseEntry(module: ModuleKey, raw: Record<string, unknown>, role
         inQty = q;
         outQty = q;
       }
-      if (cfg.lineMode === "out") outQty = q ?? outQty;
+      if (cfg.lineMode === "out") {
+        // Registers that only take from stock never add to it (stock comes in through Stock in).
+        inQty = null;
+        outQty = q ?? outQty;
+      }
       if (cfg.lineMode === "kind") {
         const isIn = kind ? IN_KINDS.has(kind) : false;
         inQty = isIn ? q : null;
         outQty = isIn ? null : q;
       }
       if (!(inQty && inQty > 0) && !(outQty && outQty > 0) && !Object.keys(errors).some((k) => k.startsWith(`${p}.`))) {
-        errors[`${p}.${cfg.lineMode === "inout" ? "inQty" : "qty"}`] = "entries.qtyRequired";
+        errors[`${p}.qty`] = "entries.qtyRequired";
       }
       const r = typeof rate === "number" ? rate : null;
       lines.push({

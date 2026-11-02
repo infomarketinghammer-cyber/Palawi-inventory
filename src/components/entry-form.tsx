@@ -153,7 +153,7 @@ export function EntryForm({
             const unit = item ? t(`units.${item.unit}`) : "";
             const p = `lines.${idx}`;
             const avail = l.itemId ? available[l.itemId] ?? 0 : null;
-            const showAvail = avail !== null && (cfg.lineMode === "inout" || cfg.lineMode === "out" || cfg.lineMode === "kind");
+            const showAvail = avail !== null && (cfg.lineMode === "out" || cfg.lineMode === "kind");
             return (
               <Card key={idx} className="grid gap-3 p-3 sm:grid-cols-12 sm:items-end sm:p-4">
                 {cfg.lineMode === "kind" && (
@@ -192,14 +192,7 @@ export function EntryForm({
                   )}
                 </Field>
 
-                {cfg.lineMode === "inout" ? (
-                  <>
-                    <QtyInput id={`${p}.inQty`} label={`${t("entries.inQty")} ${unit && `(${unit})`}`} value={l.inQty} onChange={(v) => setLine(idx, { inQty: v })} error={err(`${p}.inQty`)} />
-                    <QtyInput id={`${p}.outQty`} label={`${t("entries.outQty")} ${unit && `(${unit})`}`} value={l.outQty} onChange={(v) => setLine(idx, { outQty: v })} error={err(`${p}.outQty`)} />
-                  </>
-                ) : (
-                  <QtyInput id={`${p}.qty`} label={`${t("entries.qty")} ${unit && `(${unit})`}`} value={l.qty} onChange={(v) => setLine(idx, { qty: v })} error={err(`${p}.qty`)} />
-                )}
+                <QtyInput id={`${p}.qty`} label={`${t(cfg.qtyLabel ?? "entries.qty")} ${unit && `(${unit})`}`} value={l.qty} onChange={(v) => setLine(idx, { qty: v })} error={err(`${p}.qty`)} />
 
                 {cfg.lineExtras.includes("source") && (
                   <Field id={`${p}.source`} label={t("entries.source")} className="sm:col-span-3">

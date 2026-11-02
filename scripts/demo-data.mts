@@ -134,7 +134,6 @@ add("purchase", 21, {
   fields: { supplier: "प्रारंभिक साठा मोजणी / Opening stock count" },
   lines: Object.entries(OPENING).filter(([, q]) => q > 0).map(([code, q]) => ({ itemId: id(code), kind: "opening", inQty: q })),
   remarks: "महिन्याच्या सुरुवातीचा साठा / Opening stock",
-  byAdmin: true,
 });
 const SUPPLIERS = ["विठ्ठल किराणा स्टोअर्स, पंढरपूर", "श्री गजानन ट्रेडर्स", "पंढरपूर कृषी उत्पन्न बाजार", "महालक्ष्मी सुपर मार्केट", "स्वामी समर्थ एजन्सी"];
 const DONORS = ["श्री. सुरेश पाटील", "सौ. मीना कुलकर्णी", "रोटरी क्लब, पंढरपूर", "श्री. अमोल देशमुख", "लायन्स क्लब, सोलापूर", "श्री. राजेंद्र शिंदे"];
@@ -183,7 +182,6 @@ for (let back = 18; back >= 0; back--) {
     { itemId: id("OIL"), outQty: 0.9 },
     { itemId: id("SUGAR"), outQty: 0.8 },
     { itemId: id("SALT"), outQty: 0.25 },
-    { itemId: id("MILK"), inQty: 8, outQty: 8 },
   ];
   if (back % 4 === 0) lines.push({ itemId: id("POHA"), outQty: 1.5 });
   if (back % 5 === 0) lines.push({ itemId: id("TURMERIC"), outQty: 0.1 }, { itemId: id("CHILLI_POWDER"), outQty: 0.15 });

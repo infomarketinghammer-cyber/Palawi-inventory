@@ -45,10 +45,12 @@ export default async function GatePage({ searchParams }: { searchParams: Promise
     <div className="space-y-6">
       <PageHeader title={t("gate.title")}>
         <div className="flex flex-wrap gap-2">
-          <Link href="/gate/new" className={buttonVariants()}>
-            <Plus size={18} aria-hidden />
-            {t("gate.newVisit")}
-          </Link>
+          {!isAdmin && (
+            <Link href="/gate/new" className={buttonVariants()}>
+              <Plus size={18} aria-hidden />
+              {t("gate.newVisit")}
+            </Link>
+          )}
           <Link href="/gate/visitors" className={buttonVariants({ variant: "outline" })}>
             <Users size={18} aria-hidden />
             {t("gate.visitors")}

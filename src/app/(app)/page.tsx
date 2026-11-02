@@ -140,9 +140,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               <ul className="flex flex-wrap gap-2">
                 {d.missingToday.map((m) => (
                   <li key={m}>
-                    <Link href={`/registers/${m}/new`} className="inline-flex min-h-11 items-center rounded-xl border border-primary-300 bg-white px-3 text-primary-800 hover:bg-primary-50">
-                      + {t(`modules.${m}`)}
-                    </Link>
+                    {isAdmin ? (
+                      <Link href={`/registers/${m}`} className="inline-flex min-h-11 items-center rounded-xl border border-primary-300 bg-white px-3 text-primary-800 hover:bg-primary-50">
+                        {t(`modules.${m}`)}
+                      </Link>
+                    ) : (
+                      <Link href={`/registers/${m}/new`} className="inline-flex min-h-11 items-center rounded-xl border border-primary-300 bg-white px-3 text-primary-800 hover:bg-primary-50">
+                        + {t(`modules.${m}`)}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -179,9 +185,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               ))}
             </ul>
           )}
-          <Link href="/registers/purchase/new" className="inline-flex min-h-11 items-center rounded-xl bg-primary-600 px-4 text-white hover:bg-primary-700">
-            + {t("stock.addPurchase")}
-          </Link>
+          {!isAdmin && (
+            <Link href="/registers/purchase/new" className="inline-flex min-h-11 items-center rounded-xl bg-primary-600 px-4 text-white hover:bg-primary-700">
+              + {t("stock.addPurchase")}
+            </Link>
+          )}
         </Card>
       </div>
 

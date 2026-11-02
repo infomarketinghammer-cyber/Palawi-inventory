@@ -20,10 +20,6 @@ export function linesToMovements(module: ModuleKey, lines: Line[]): Movement[] {
     const inQty = l.inQty ?? 0;
     const outQty = l.outQty ?? 0;
     switch (mode) {
-      case "inout":
-        if (inQty > 0) out.push({ itemId: l.itemId, qty: inQty, direction: "IN", type: "purchase" });
-        if (outQty > 0) out.push({ itemId: l.itemId, qty: outQty, direction: "OUT", type: "consumption" });
-        break;
       case "sameday": {
         const qty = outQty || inQty;
         if (qty > 0) {
@@ -33,7 +29,7 @@ export function linesToMovements(module: ModuleKey, lines: Line[]): Movement[] {
         break;
       }
       case "out":
-        if (outQty > 0) out.push({ itemId: l.itemId, qty: outQty, direction: "OUT", type: "distribution" });
+        if (outQty > 0) out.push({ itemId: l.itemId, qty: outQty, direction: "OUT", type: MODULES[module].outType ?? "distribution" });
         break;
       case "kind": {
         const kind = l.kind ?? "";

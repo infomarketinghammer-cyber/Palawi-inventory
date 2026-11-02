@@ -6,7 +6,7 @@ import { tenantDb } from "@/lib/tenant";
 import { formatNumber } from "@/lib/format";
 import { getFormatPrefs } from "@/lib/i18n-helpers";
 import { stockRows } from "@/lib/stock-view";
-import { CATEGORIES } from "@/lib/modules";
+import { CATEGORIES, MODULES } from "@/lib/modules";
 import { Card, Notice, PageHeader } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/table";
 import { buttonVariants } from "@/components/ui/button";
@@ -32,10 +32,12 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
     <div className="space-y-6">
       <PageHeader title={t("stock.title")} intro={t("stock.intro")}>
         <div className="flex flex-wrap gap-2">
-          <Link href="/registers/purchase/new" className={buttonVariants()}>
-            <Plus size={18} aria-hidden />
-            {t("stock.addPurchase")}
-          </Link>
+          {MODULES.purchase.createRoles.includes(session.role) && (
+            <Link href="/registers/purchase/new" className={buttonVariants()}>
+              <Plus size={18} aria-hidden />
+              {t("stock.addPurchase")}
+            </Link>
+          )}
           <Link href="/stock/statement" className={buttonVariants({ variant: "outline" })}>
             <CalendarRange size={18} aria-hidden />
             {t("stock.statement")}

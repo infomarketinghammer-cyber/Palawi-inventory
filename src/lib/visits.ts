@@ -44,6 +44,8 @@ export type VisitInput = z.infer<typeof visitSchema>;
 
 /** Records a gate visit. A donation visit also creates a Donation and, for goods with items, a pending stock-in entry. */
 export async function createVisit(session: Session, input: VisitInput, today: string): Promise<EngineResult> {
+  // Visits are recorded at the gate by the store user; the admin reviews them.
+  if (session.role !== "STORE_USER") return { ok: false, error: "common.denied" };
   if (!session.institutionId) return { ok: false, error: "home.noInstitution" };
   if (input.date > today) return { ok: false, error: "entries.futureDate" };
   const institutionId = session.institutionId;

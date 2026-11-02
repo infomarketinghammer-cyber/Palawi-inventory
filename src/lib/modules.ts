@@ -19,13 +19,13 @@ export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 /**
  * How a register's lines move stock:
- * - inout:   received (IN purchase) and consumed (OUT consumption) per item       — grain register
  * - sameday: bought and used the same day (IN + OUT of the same qty)               — vegetables, fruit
- * - out:     issued from stock (OUT distribution)                                  — personal items, cleaning
+ * - out:     taken from stock (OUT consumption or distribution, see `outType`)     — grain, personal items, cleaning
  * - kind:    each line picks a kind (purchase, issue, return, damage, ...)         — stock in, utensils, adjustment
  * - none:    no item lines                                                          — meals, expenses
+ * Stock only comes in through the Stock in register (or a donation at the gate).
  */
-export type LineMode = "inout" | "sameday" | "out" | "kind" | "none";
+export type LineMode = "sameday" | "out" | "kind" | "none";
 
 export type FieldType = "text" | "textarea" | "number" | "select" | "date";
 export type HeaderField = {
@@ -43,6 +43,10 @@ export type ModuleConfig = {
   categories: readonly string[];
   lineMode: LineMode;
   kinds?: readonly string[];
+  /** Ledger type for "out" lines: consumption (eaten/used up) or distribution (issued). Default distribution. */
+  outType?: "consumption" | "distribution";
+  /** Translation key for the single quantity input. Default entries.qty. */
+  qtyLabel?: string;
   childCount: boolean;
   header: readonly HeaderField[];
   lineExtras: readonly LineExtra[];
@@ -73,17 +77,20 @@ export const UNITS = ["kg", "g", "l", "ml", "piece", "packet", "set", "dozen", "
 export const EXPENSE_CATEGORIES = ["SERVICE", "PURCHASE", "MAINTENANCE", "UTILITY", "MEDICAL", "OTHER"] as const;
 
 const PROVISIONS = ["GRAIN", "PULSES", "SPICES", "OIL", "DAIRY", "FUEL", "PROVISIONS"] as const;
-const BOTH: readonly Role[] = ["STORE_USER", "ADMIN"];
+// The store user records; the admin views, approves, rejects and unlocks (stock adjustments are the admin's own).
+const STORE: readonly Role[] = ["STORE_USER"];
 
 export const MODULES: Record<ModuleKey, ModuleConfig> = {
   grain: {
     key: "grain",
     categories: PROVISIONS,
-    lineMode: "inout",
+    lineMode: "out",
+    outType: "consumption",
+    qtyLabel: "entries.outQty",
     childCount: true,
     header: [],
     lineExtras: [],
-    createRoles: BOTH,
+    createRoles: STORE,
     listed: true,
   },
   meals: {
@@ -98,7 +105,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
       { name: "dinner", type: "textarea" },
     ],
     lineExtras: [],
-    createRoles: BOTH,
+    createRoles: STORE,
     listed: true,
   },
   vegetables: {
@@ -108,7 +115,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
     childCount: true,
     header: [],
     lineExtras: [],
-    createRoles: BOTH,
+    createRoles: STORE,
     listed: true,
   },
   fruit: {
@@ -118,7 +125,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
     childCount: true,
     header: [],
     lineExtras: ["source", "donorName"],
-    createRoles: BOTH,
+    createRoles: STORE,
     listed: true,
   },
   personal: {
@@ -128,7 +135,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
     childCount: true,
     header: [],
     lineExtras: ["acknowledged", "note"],
-    createRoles: BOTH,
+    createRoles: STORE,
     listed: true,
   },
   cleaning: {
@@ -142,7 +149,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
       { name: "medicalOfficerDate", type: "date", adminOnly: true },
     ],
     lineExtras: ["note"],
-    createRoles: BOTH,
+    createRoles: STORE,
     listed: true,
   },
   utensils: {
@@ -153,7 +160,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
     childCount: false,
     header: [{ name: "issuedTo", type: "text" }],
     lineExtras: ["note"],
-    createRoles: BOTH,
+    createRoles: STORE,
     listed: true,
   },
   expenses: {
@@ -171,7 +178,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
       { name: "billNo", type: "text" },
     ],
     lineExtras: [],
-    createRoles: BOTH,
+    createRoles: STORE,
     listed: true,
   },
   purchase: {
@@ -185,7 +192,7 @@ export const MODULES: Record<ModuleKey, ModuleConfig> = {
       { name: "billNo", type: "text" },
     ],
     lineExtras: ["rate", "donorName", "expiryDate"],
-    createRoles: BOTH,
+    createRoles: STORE,
     listed: true,
   },
   adjustment: {
